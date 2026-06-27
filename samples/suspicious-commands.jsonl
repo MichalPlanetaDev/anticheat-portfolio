@@ -1,0 +1,5 @@
+{"Move":{"player_id":1,"sequence":1,"client_time_ms":100,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":1.0,"y":0.0}}}
+{"Move":{"player_id":1,"sequence":2,"client_time_ms":200,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":20.0,"y":0.0}}}
+{"Fire":{"player_id":1,"sequence":3,"client_time_ms":300,"aim_direction":{"x":1.0,"y":0.0}}}
+{"Fire":{"player_id":1,"sequence":4,"client_time_ms":400,"aim_direction":{"x":1.0,"y":0.0}}}
+{"Move":{"player_id":1,"sequence":4,"client_time_ms":500,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":21.0,"y":0.0}}}

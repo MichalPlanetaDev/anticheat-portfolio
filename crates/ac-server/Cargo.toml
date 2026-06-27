@@ -7,3 +7,4 @@ edition = "2024"
 ac-protocol = { path = "../ac-protocol" }
 ac-detectors = { path = "../ac-detectors" }
 ac-telemetry = { path = "../ac-telemetry" }
+serde_json = "1"

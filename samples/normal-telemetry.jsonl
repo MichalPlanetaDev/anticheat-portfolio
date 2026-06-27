@@ -1,0 +1,14 @@
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":1,"client_time_ms":100,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":1.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":1.0,"y":0.0},"health":100,"alive":true,"server_time_ms":100}}
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":2,"client_time_ms":200,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":2.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":2.0,"y":0.0},"health":100,"alive":true,"server_time_ms":200}}
+{"CommandAccepted":{"Fire":{"player_id":1,"sequence":3,"client_time_ms":300,"aim_direction":{"x":1.0,"y":0.0}}}}
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":4,"client_time_ms":400,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":3.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":3.0,"y":0.0},"health":100,"alive":true,"server_time_ms":400}}
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":5,"client_time_ms":500,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":4.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":4.0,"y":0.0},"health":100,"alive":true,"server_time_ms":500}}
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":6,"client_time_ms":600,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":5.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":5.0,"y":0.0},"health":100,"alive":true,"server_time_ms":600}}
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":7,"client_time_ms":700,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":6.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":6.0,"y":0.0},"health":100,"alive":true,"server_time_ms":700}}
+{"CommandAccepted":{"Fire":{"player_id":1,"sequence":8,"client_time_ms":800,"aim_direction":{"x":1.0,"y":0.0}}}}

@@ -1,4 +1,9 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{self, BufRead, BufReader},
+    path::Path,
+};
 
 use ac_detectors::{Detector, FireRateDetector, SpeedHackDetector};
 use ac_protocol::{
@@ -218,7 +223,7 @@ impl GameServer {
         self.telemetry.push(TelemetryEvent::Suspicion(report));
     }
 
-    fn write_telemetry_jsonl(&self, path: &str) -> std::io::Result<()> {
+    fn write_telemetry_jsonl(&self, path: &str) -> io::Result<()> {
         let mut writer = TelemetryWriter::create(path)?;
         writer.write_events(&self.telemetry)?;
         writer.flush()
@@ -264,12 +269,102 @@ impl GameServer {
 }
 
 fn main() {
+    if let Err(error) = run() {
+        eprintln!("server failed: {error}");
+        std::process::exit(1);
+    }
+}
+
+fn run() -> io::Result<()> {
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+
+    match args.first().map(String::as_str) {
+        None | Some("demo") => {
+            run_scenario(demo_commands(), "samples/server-session.jsonl")?;
+        }
+        Some("run") => {
+            let command_path = args.get(1).ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing command JSONL path after 'run'",
+                )
+            })?;
+
+            let telemetry_path = args
+                .get(2)
+                .map(String::as_str)
+                .unwrap_or("samples/server-session.jsonl");
+
+            let commands = read_commands_jsonl(command_path)?;
+            run_scenario(commands, telemetry_path)?;
+        }
+        Some("help") | Some("--help") | Some("-h") => {
+            print_help();
+        }
+        Some(unknown) => {
+            eprintln!("unknown command: {unknown}");
+            eprintln!();
+            print_help();
+            std::process::exit(2);
+        }
+    }
+
+    Ok(())
+}
+
+fn print_help() {
+    println!("Authoritative Anti-Cheat Server Simulation");
+    println!();
+    println!("Usage:");
+    println!("  cargo run -p ac-server -- demo");
+    println!("  cargo run -p ac-server -- run <commands-jsonl> [telemetry-jsonl]");
+}
+
+fn run_scenario(commands: Vec<ClientCommand>, telemetry_path: &str) -> io::Result<()> {
     let mut server = GameServer::new();
+
+    for command in commands {
+        server.process_command(command);
+    }
+
+    server.print_telemetry();
+    server.write_telemetry_jsonl(telemetry_path)?;
+
+    println!();
+    println!("Wrote telemetry: {telemetry_path}");
+
+    Ok(())
+}
+
+fn read_commands_jsonl(path: impl AsRef<Path>) -> io::Result<Vec<ClientCommand>> {
+    let file = File::open(path.as_ref())?;
+    let reader = BufReader::new(file);
+    let mut commands = Vec::new();
+
+    for (line_index, line) in reader.lines().enumerate() {
+        let line = line?;
+
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let command = serde_json::from_str(&line).map_err(|error| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("failed to parse command line {}: {}", line_index + 1, error),
+            )
+        })?;
+
+        commands.push(command);
+    }
+
+    Ok(commands)
+}
+
+fn demo_commands() -> Vec<ClientCommand> {
     let player_id = PlayerId(1);
 
-    server.add_player(player_id);
-
-    let commands = vec![
+    vec![
         ClientCommand::Move(MovementCommand {
             player_id,
             sequence: 1,
@@ -298,21 +393,5 @@ fn main() {
             client_time_ms: 400,
             aim_direction: Vec2::new(1.0, 0.0),
         }),
-    ];
-
-    for command in commands {
-        server.process_command(command);
-    }
-
-    server.print_telemetry();
-
-    let telemetry_path = "samples/server-session.jsonl";
-
-    if let Err(error) = server.write_telemetry_jsonl(telemetry_path) {
-        eprintln!("failed to write telemetry: {error}");
-        std::process::exit(1);
-    }
-
-    println!();
-    println!("Wrote telemetry: {telemetry_path}");
+    ]
 }

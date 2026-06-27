@@ -14,6 +14,10 @@ dependencies = [
 [[package]]
 name = "ac-client-bot"
 version = "0.1.0"
+dependencies = [
+ "ac-protocol",
+ "serde_json",
+]
 
 [[package]]
 name = "ac-detectors"
@@ -44,6 +48,7 @@ dependencies = [
  "ac-detectors",
  "ac-protocol",
  "ac-telemetry",
+ "serde_json",
 ]
 
 [[package]]
