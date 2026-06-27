@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/ac-protocol",
+    "crates/ac-detectors",
+    "crates/ac-telemetry",
+    "crates/ac-replay",
+    "crates/ac-server",
+    "crates/ac-client-bot",
+    "crates/ac-cli"
+]
