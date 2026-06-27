@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "ac-detectors",
  "ac-protocol",
+ "ac-replay",
 ]
 
 [[package]]
@@ -31,6 +32,10 @@ dependencies = [
 [[package]]
 name = "ac-replay"
 version = "0.1.0"
+dependencies = [
+ "ac-protocol",
+ "ac-telemetry",
+]
 
 [[package]]
 name = "ac-server"

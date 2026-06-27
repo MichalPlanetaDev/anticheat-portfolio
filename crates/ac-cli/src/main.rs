@@ -1,14 +1,26 @@
 use ac_detectors::{Detector, FireRateDetector, SpeedHackDetector};
 use ac_protocol::{FireSample, MovementSample, PlayerId, SuspicionReport, Vec2};
+use ac_replay::summarize_file;
 
 fn main() {
-    let command = std::env::args().nth(1);
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
 
-    match command.as_deref() {
+    match args.first().map(String::as_str) {
         None | Some("help") | Some("--help") | Some("-h") => print_help(),
         Some("speed-check") => run_speed_check(),
         Some("fire-check") => run_fire_check(),
         Some("demo-report") => run_demo_report(),
+        Some("replay") => {
+            let Some(path) = args.get(1) else {
+                eprintln!("Missing telemetry file path.");
+                eprintln!();
+                eprintln!("Usage:");
+                eprintln!("  cargo run -p ac-cli -- replay samples/server-session.jsonl");
+                std::process::exit(2);
+            };
+
+            run_replay(path);
+        }
         Some(unknown) => {
             eprintln!("Unknown command: {unknown}");
             eprintln!();
@@ -25,10 +37,11 @@ fn print_help() {
     println!("  cargo run -p ac-cli -- <command>");
     println!();
     println!("Commands:");
-    println!("  help          Show this help message");
-    println!("  speed-check   Run movement speed anomaly examples");
-    println!("  fire-check    Run weapon cooldown anomaly examples");
-    println!("  demo-report   Run all demo detections and print a summary");
+    println!("  help                 Show this help message");
+    println!("  speed-check          Run movement speed anomaly examples");
+    println!("  fire-check           Run weapon cooldown anomaly examples");
+    println!("  demo-report          Run all demo detections and print a summary");
+    println!("  replay <jsonl-path>  Summarize saved telemetry from a JSONL file");
 }
 
 fn run_speed_check() {
@@ -73,7 +86,7 @@ fn run_speed_check() {
         let allowed_distance =
             sample.max_speed_units_per_second * sample.elapsed_seconds() + sample.tolerance_units;
 
-        println!("Allowed distance: {:.3}", allowed_distance);
+        println!("Allowed distance: {allowed_distance:.3}");
 
         match detector.inspect(&sample) {
             Some(report) => print_report(&report),
@@ -197,6 +210,36 @@ fn run_demo_report() {
     for report in reports {
         print_report(&report);
         println!();
+    }
+}
+
+fn run_replay(path: &str) {
+    match summarize_file(path) {
+        Ok(summary) => {
+            println!("Telemetry replay summary");
+            println!();
+            println!("File: {path}");
+            println!("Total events: {}", summary.total_events);
+            println!("Accepted commands: {}", summary.accepted_commands);
+            println!("Player snapshots: {}", summary.player_snapshots);
+            println!("Suspicion reports: {}", summary.suspicion_reports);
+            println!();
+
+            if summary.suspicion_by_kind.is_empty() {
+                println!("No suspicious behavior detected.");
+                return;
+            }
+
+            println!("Suspicion breakdown:");
+
+            for (kind, count) in summary.suspicion_by_kind {
+                println!("  {kind}: {count}");
+            }
+        }
+        Err(error) => {
+            eprintln!("Failed to replay telemetry file '{path}': {error}");
+            std::process::exit(1);
+        }
     }
 }
 
