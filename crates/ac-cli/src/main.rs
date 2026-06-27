@@ -1,6 +1,6 @@
 use ac_detectors::{Detector, FireRateDetector, SpeedHackDetector};
 use ac_protocol::{FireSample, MovementSample, PlayerId, SuspicionReport, Vec2};
-use ac_replay::{summarize_file, suspicion_reports_from_file};
+use ac_replay::{export_suspicion_reports_csv, summarize_file, suspicion_reports_from_file};
 
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -32,6 +32,30 @@ fn main() {
 
             run_inspect(path);
         }
+
+        Some("export") => {
+            let Some(input_path) = args.get(1) else {
+                eprintln!("Missing input telemetry file path.");
+                eprintln!();
+                eprintln!("Usage:");
+                eprintln!(
+                    "  cargo run -p ac-cli -- export samples/suspicious-telemetry.jsonl reports/suspicious-report.csv"
+                );
+                std::process::exit(2);
+            };
+
+            let Some(output_path) = args.get(2) else {
+                eprintln!("Missing output CSV file path.");
+                eprintln!();
+                eprintln!("Usage:");
+                eprintln!(
+                    "  cargo run -p ac-cli -- export samples/suspicious-telemetry.jsonl reports/suspicious-report.csv"
+                );
+                std::process::exit(2);
+            };
+
+            run_export(input_path, output_path);
+        }
         Some(unknown) => {
             eprintln!("Unknown command: {unknown}");
             eprintln!();
@@ -54,6 +78,7 @@ fn print_help() {
     println!("  demo-report          Run all demo detections and print a summary");
     println!("  replay <jsonl-path>  Summarize saved telemetry from a JSONL file");
     println!("  inspect <jsonl-path> Print detailed suspicion reports from telemetry");
+    println!("  export <jsonl-path> <csv-path> Export suspicion reports to CSV");
 }
 
 fn run_speed_check() {
@@ -282,6 +307,22 @@ fn run_inspect(path: &str) {
         }
         Err(error) => {
             eprintln!("Failed to inspect telemetry file '{path}': {error}");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run_export(input_path: &str, output_path: &str) {
+    match export_suspicion_reports_csv(input_path, output_path) {
+        Ok(report_count) => {
+            println!("Exported suspicion reports");
+            println!();
+            println!("Input: {input_path}");
+            println!("Output: {output_path}");
+            println!("Reports exported: {report_count}");
+        }
+        Err(error) => {
+            eprintln!("Failed to export suspicion reports: {error}");
             std::process::exit(1);
         }
     }

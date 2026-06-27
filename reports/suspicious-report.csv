@@ -1,0 +1,4 @@
+player_id,sequence,kind,reason,observed_value,expected_limit
+1,2,SpeedHack,movement distance exceeded server-authoritative speed limit,19.000,1.150
+1,4,FireRateViolation,fire command arrived before weapon cooldown expired,400.000,800.000
+1,4,SpeedHack,movement distance exceeded server-authoritative speed limit,19.000,1.150

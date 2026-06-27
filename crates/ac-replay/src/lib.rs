@@ -1,4 +1,9 @@
-use std::{collections::BTreeMap, io, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs::File,
+    io::{self, BufWriter, Write},
+    path::Path,
+};
 
 use ac_protocol::{SuspicionReport, TelemetryEvent};
 use ac_telemetry::read_events;
@@ -67,6 +72,57 @@ pub fn suspicion_reports_from_events(events: &[TelemetryEvent]) -> Vec<Suspicion
 pub fn suspicion_reports_from_file(path: impl AsRef<Path>) -> io::Result<Vec<SuspicionReport>> {
     let events = read_events(path)?;
     Ok(suspicion_reports_from_events(&events))
+}
+
+pub fn export_suspicion_reports_csv(
+    input_path: impl AsRef<Path>,
+    output_path: impl AsRef<Path>,
+) -> io::Result<usize> {
+    let reports = suspicion_reports_from_file(input_path)?;
+    write_suspicion_reports_csv(output_path, &reports)?;
+    Ok(reports.len())
+}
+
+pub fn write_suspicion_reports_csv(
+    output_path: impl AsRef<Path>,
+    reports: &[SuspicionReport],
+) -> io::Result<()> {
+    let output_path = output_path.as_ref();
+
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let file = File::create(output_path)?;
+    let mut writer = BufWriter::new(file);
+
+    writeln!(
+        writer,
+        "player_id,sequence,kind,reason,observed_value,expected_limit"
+    )?;
+
+    for report in reports {
+        writeln!(
+            writer,
+            "{},{},{},{},{:.3},{:.3}",
+            report.player_id.0,
+            report.sequence,
+            csv_escape(&format!("{:?}", report.kind)),
+            csv_escape(&report.reason),
+            report.observed_value,
+            report.expected_limit
+        )?;
+    }
+
+    writer.flush()
+}
+
+fn csv_escape(value: &str) -> String {
+    if value.contains(',') || value.contains('"') || value.contains('\n') {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_string()
+    }
 }
 
 #[cfg(test)]
