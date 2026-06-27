@@ -1,8 +1,6 @@
-# Anti-Cheat Engineering Lab
+# Anti-Cheat Portfolio
 
-A Rust-based defensive anti-cheat engineering lab focused on server-authoritative validation, telemetry, replay analysis, anomaly detection, debugging, and secure backend development practices.
-
-This project is built as a portfolio-grade learning lab for multiplayer backend security and anti-cheat architecture. It does not target, modify, inspect, bypass, or interact with third-party games.
+This project is built as a portfolio for multiplayer backend security and anti-cheat architecture. It does not target, modify, inspect, bypass, or interact with third-party games.
 
 ## What this project demonstrates
 
@@ -70,10 +68,6 @@ SpeedHackDetector flags movement when the observed movement distance exceeds the
 FireRateDetector flags fire commands that arrive before the server-side weapon cooldown expires.
 
 Packet sequence validation flags commands with repeated or non-increasing sequence numbers.
-
-## Legal and ethical scope
-
-This repository is defensive and educational.
 
 It does not include cheats, bypasses, injectors, malware, kernel components, commercial game reverse engineering, or instructions for attacking third-party software.
 
