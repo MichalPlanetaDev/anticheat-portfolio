@@ -59,6 +59,7 @@ pub struct MovementCommand {
     pub client_time_ms: Milliseconds,
     pub direction: Vec2,
     pub dt_ms: Milliseconds,
+    pub claimed_position: Option<Vec2>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
