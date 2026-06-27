@@ -5,6 +5,7 @@ use ac_protocol::{
     ClientCommand, FireCommand, FireSample, MovementCommand, MovementSample, PlayerId,
     PlayerSnapshot, SuspicionKind, SuspicionReport, TelemetryEvent, Vec2,
 };
+use ac_telemetry::TelemetryWriter;
 
 const MAX_SPEED_UNITS_PER_SECOND: f32 = 10.0;
 const MOVEMENT_TOLERANCE_UNITS: f32 = 0.15;
@@ -217,6 +218,12 @@ impl GameServer {
         self.telemetry.push(TelemetryEvent::Suspicion(report));
     }
 
+    fn write_telemetry_jsonl(&self, path: &str) -> std::io::Result<()> {
+        let mut writer = TelemetryWriter::create(path)?;
+        writer.write_events(&self.telemetry)?;
+        writer.flush()
+    }
+
     fn print_telemetry(&self) {
         println!("Authoritative server simulation");
         println!();
@@ -298,4 +305,14 @@ fn main() {
     }
 
     server.print_telemetry();
+
+    let telemetry_path = "samples/server-session.jsonl";
+
+    if let Err(error) = server.write_telemetry_jsonl(telemetry_path) {
+        eprintln!("failed to write telemetry: {error}");
+        std::process::exit(1);
+    }
+
+    println!();
+    println!("Wrote telemetry: {telemetry_path}");
 }

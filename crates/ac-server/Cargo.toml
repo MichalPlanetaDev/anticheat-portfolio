@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 ac-protocol = { path = "../ac-protocol" }
 ac-detectors = { path = "../ac-detectors" }
+ac-telemetry = { path = "../ac-telemetry" }

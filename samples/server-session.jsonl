@@ -1,0 +1,7 @@
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":1,"client_time_ms":100,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":1.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":1.0,"y":0.0},"health":100,"alive":true,"server_time_ms":100}}
+{"Suspicion":{"player_id":1,"sequence":2,"kind":"SpeedHack","reason":"movement distance exceeded server-authoritative speed limit","observed_value":19.0,"expected_limit":1.15}}
+{"CommandAccepted":{"Move":{"player_id":1,"sequence":2,"client_time_ms":200,"direction":{"x":1.0,"y":0.0},"dt_ms":100,"claimed_position":{"x":20.0,"y":0.0}}}}
+{"PlayerSnapshot":{"player_id":1,"position":{"x":2.0,"y":0.0},"health":100,"alive":true,"server_time_ms":200}}
+{"CommandAccepted":{"Fire":{"player_id":1,"sequence":3,"client_time_ms":300,"aim_direction":{"x":1.0,"y":0.0}}}}
+{"Suspicion":{"player_id":1,"sequence":4,"kind":"FireRateViolation","reason":"fire command arrived before weapon cooldown expired","observed_value":400.0,"expected_limit":800.0}}
