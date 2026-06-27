@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io, path::Path};
 
-use ac_protocol::TelemetryEvent;
+use ac_protocol::{SuspicionReport, TelemetryEvent};
 use ac_telemetry::read_events;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,6 +54,21 @@ pub fn summarize_file(path: impl AsRef<Path>) -> io::Result<ReplaySummary> {
     Ok(ReplaySummary::from_events(&events))
 }
 
+pub fn suspicion_reports_from_events(events: &[TelemetryEvent]) -> Vec<SuspicionReport> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            TelemetryEvent::Suspicion(report) => Some(report.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+pub fn suspicion_reports_from_file(path: impl AsRef<Path>) -> io::Result<Vec<SuspicionReport>> {
+    let events = read_events(path)?;
+    Ok(suspicion_reports_from_events(&events))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,9 +76,8 @@ mod tests {
         PlayerId, PlayerSnapshot, SuspicionKind, SuspicionReport, TelemetryEvent, Vec2,
     };
 
-    #[test]
-    fn summarizes_telemetry_events() {
-        let events = vec![
+    fn sample_events() -> Vec<TelemetryEvent> {
+        vec![
             TelemetryEvent::PlayerSnapshot(PlayerSnapshot {
                 player_id: PlayerId(1),
                 position: Vec2::new(1.0, 2.0),
@@ -79,9 +93,12 @@ mod tests {
                 5.0,
                 1.0,
             )),
-        ];
+        ]
+    }
 
-        let summary = ReplaySummary::from_events(&events);
+    #[test]
+    fn summarizes_telemetry_events() {
+        let summary = ReplaySummary::from_events(&sample_events());
 
         assert_eq!(summary.total_events, 2);
         assert_eq!(summary.accepted_commands, 0);
@@ -89,5 +106,15 @@ mod tests {
         assert_eq!(summary.suspicion_reports, 1);
         assert_eq!(summary.suspicion_by_kind.get("SpeedHack"), Some(&1));
         assert!(summary.has_suspicions());
+    }
+
+    #[test]
+    fn extracts_suspicion_reports() {
+        let reports = suspicion_reports_from_events(&sample_events());
+
+        assert_eq!(reports.len(), 1);
+        assert_eq!(reports[0].player_id, PlayerId(1));
+        assert_eq!(reports[0].sequence, 42);
+        assert_eq!(reports[0].kind, SuspicionKind::SpeedHack);
     }
 }

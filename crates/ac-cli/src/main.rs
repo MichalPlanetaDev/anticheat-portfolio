@@ -1,6 +1,6 @@
 use ac_detectors::{Detector, FireRateDetector, SpeedHackDetector};
 use ac_protocol::{FireSample, MovementSample, PlayerId, SuspicionReport, Vec2};
-use ac_replay::summarize_file;
+use ac_replay::{summarize_file, suspicion_reports_from_file};
 
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -20,6 +20,17 @@ fn main() {
             };
 
             run_replay(path);
+        }
+        Some("inspect") => {
+            let Some(path) = args.get(1) else {
+                eprintln!("Missing telemetry file path.");
+                eprintln!();
+                eprintln!("Usage:");
+                eprintln!("  cargo run -p ac-cli -- inspect samples/suspicious-telemetry.jsonl");
+                std::process::exit(2);
+            };
+
+            run_inspect(path);
         }
         Some(unknown) => {
             eprintln!("Unknown command: {unknown}");
@@ -42,6 +53,7 @@ fn print_help() {
     println!("  fire-check           Run weapon cooldown anomaly examples");
     println!("  demo-report          Run all demo detections and print a summary");
     println!("  replay <jsonl-path>  Summarize saved telemetry from a JSONL file");
+    println!("  inspect <jsonl-path> Print detailed suspicion reports from telemetry");
 }
 
 fn run_speed_check() {
@@ -238,6 +250,38 @@ fn run_replay(path: &str) {
         }
         Err(error) => {
             eprintln!("Failed to replay telemetry file '{path}': {error}");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run_inspect(path: &str) {
+    match suspicion_reports_from_file(path) {
+        Ok(reports) => {
+            println!("Telemetry suspicion inspection");
+            println!();
+            println!("File: {path}");
+            println!("Suspicion reports: {}", reports.len());
+            println!();
+
+            if reports.is_empty() {
+                println!("No suspicious behavior detected.");
+                return;
+            }
+
+            for (index, report) in reports.iter().enumerate() {
+                println!("Report #{}", index + 1);
+                println!("  Player: {:?}", report.player_id);
+                println!("  Sequence: {}", report.sequence);
+                println!("  Kind: {:?}", report.kind);
+                println!("  Reason: {}", report.reason);
+                println!("  Observed value: {:.3}", report.observed_value);
+                println!("  Expected limit: {:.3}", report.expected_limit);
+                println!();
+            }
+        }
+        Err(error) => {
+            eprintln!("Failed to inspect telemetry file '{path}': {error}");
             std::process::exit(1);
         }
     }
