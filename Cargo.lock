@@ -5,6 +5,10 @@ version = 4
 [[package]]
 name = "ac-cli"
 version = "0.1.0"
+dependencies = [
+ "ac-detectors",
+ "ac-protocol",
+]
 
 [[package]]
 name = "ac-client-bot"
