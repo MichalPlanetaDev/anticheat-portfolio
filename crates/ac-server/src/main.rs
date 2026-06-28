@@ -12,10 +12,29 @@ use ac_protocol::{
 };
 use ac_telemetry::TelemetryWriter;
 
-const MAX_SPEED_UNITS_PER_SECOND: f32 = 10.0;
-const MOVEMENT_TOLERANCE_UNITS: f32 = 0.15;
-const FIXED_TICK_MS: u64 = 100;
-const FIRE_COOLDOWN_MS: u64 = 500;
+const DEFAULT_CONFIG_PATH: &str = "config/default.toml";
+
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+struct DetectionPolicy {
+    max_speed_units_per_second: f32,
+    movement_tolerance_units: f32,
+    fixed_tick_ms: u64,
+    fire_cooldown_ms: u64,
+}
+
+impl DetectionPolicy {
+    fn load(path: impl AsRef<Path>) -> io::Result<Self> {
+        let path = path.as_ref();
+        let content = std::fs::read_to_string(path)?;
+
+        toml::from_str(&content).map_err(|error| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("failed to parse config '{}': {}", path.display(), error),
+            )
+        })
+    }
+}
 
 #[derive(Debug, Clone)]
 struct PlayerState {
@@ -51,16 +70,18 @@ impl PlayerState {
 struct GameServer {
     players: HashMap<PlayerId, PlayerState>,
     server_time_ms: u64,
+    policy: DetectionPolicy,
     speed_detector: SpeedHackDetector,
     fire_detector: FireRateDetector,
     telemetry: Vec<TelemetryEvent>,
 }
 
 impl GameServer {
-    fn new() -> Self {
+    fn new(policy: DetectionPolicy) -> Self {
         Self {
             players: HashMap::new(),
             server_time_ms: 0,
+            policy,
             speed_detector: SpeedHackDetector,
             fire_detector: FireRateDetector,
             telemetry: Vec::new(),
@@ -68,11 +89,13 @@ impl GameServer {
     }
 
     fn add_player(&mut self, player_id: PlayerId) {
-        self.players.insert(player_id, PlayerState::new());
+        self.players
+            .entry(player_id)
+            .or_insert_with(PlayerState::new);
     }
 
     fn process_command(&mut self, command: ClientCommand) {
-        self.server_time_ms += FIXED_TICK_MS;
+        self.server_time_ms += self.policy.fixed_tick_ms;
 
         match command {
             ClientCommand::Move(command) => self.process_move(command),
@@ -81,9 +104,7 @@ impl GameServer {
     }
 
     fn process_move(&mut self, command: MovementCommand) {
-        if !self.players.contains_key(&command.player_id) {
-            self.add_player(command.player_id);
-        }
+        self.add_player(command.player_id);
 
         let current = self
             .players
@@ -114,9 +135,9 @@ impl GameServer {
                 sequence: command.sequence,
                 from: current.position,
                 to: claimed_position,
-                dt_ms: FIXED_TICK_MS,
-                max_speed_units_per_second: MAX_SPEED_UNITS_PER_SECOND,
-                tolerance_units: MOVEMENT_TOLERANCE_UNITS,
+                dt_ms: self.policy.fixed_tick_ms,
+                max_speed_units_per_second: self.policy.max_speed_units_per_second,
+                tolerance_units: self.policy.movement_tolerance_units,
             };
 
             if let Some(report) = self.speed_detector.inspect(&sample) {
@@ -124,7 +145,8 @@ impl GameServer {
             }
         }
 
-        let distance_budget = MAX_SPEED_UNITS_PER_SECOND * (FIXED_TICK_MS as f32 / 1000.0);
+        let distance_budget =
+            self.policy.max_speed_units_per_second * (self.policy.fixed_tick_ms as f32 / 1000.0);
         let movement = command.direction.normalized().scaled(distance_budget);
 
         let state = self
@@ -149,9 +171,7 @@ impl GameServer {
     }
 
     fn process_fire(&mut self, command: FireCommand) {
-        if !self.players.contains_key(&command.player_id) {
-            self.add_player(command.player_id);
-        }
+        self.add_player(command.player_id);
 
         let current = self
             .players
@@ -194,7 +214,7 @@ impl GameServer {
             .expect("player must exist");
 
         state.last_sequence = command.sequence;
-        state.next_allowed_fire_time_ms = self.server_time_ms + FIRE_COOLDOWN_MS;
+        state.next_allowed_fire_time_ms = self.server_time_ms + self.policy.fire_cooldown_ms;
 
         self.telemetry
             .push(TelemetryEvent::CommandAccepted(ClientCommand::Fire(
@@ -230,7 +250,7 @@ impl GameServer {
     }
 
     fn print_telemetry(&self) {
-        println!("Authoritative server simulation");
+        println!("anticheat-portfolio server simulation");
         println!();
         println!("Server time: {} ms", self.server_time_ms);
         println!("Telemetry events: {}", self.telemetry.len());
@@ -280,7 +300,12 @@ fn run() -> io::Result<()> {
 
     match args.first().map(String::as_str) {
         None | Some("demo") => {
-            run_scenario(demo_commands(), "samples/server-session.jsonl")?;
+            let config_path = args
+                .get(1)
+                .map(String::as_str)
+                .unwrap_or(DEFAULT_CONFIG_PATH);
+
+            run_scenario(demo_commands(), "samples/server-session.jsonl", config_path)?;
         }
         Some("run") => {
             let command_path = args.get(1).ok_or_else(|| {
@@ -295,8 +320,13 @@ fn run() -> io::Result<()> {
                 .map(String::as_str)
                 .unwrap_or("samples/server-session.jsonl");
 
+            let config_path = args
+                .get(3)
+                .map(String::as_str)
+                .unwrap_or(DEFAULT_CONFIG_PATH);
+
             let commands = read_commands_jsonl(command_path)?;
-            run_scenario(commands, telemetry_path)?;
+            run_scenario(commands, telemetry_path, config_path)?;
         }
         Some("help") | Some("--help") | Some("-h") => {
             print_help();
@@ -313,15 +343,30 @@ fn run() -> io::Result<()> {
 }
 
 fn print_help() {
-    println!("Authoritative Anti-Cheat Server Simulation");
+    println!("anticheat-portfolio server simulation");
     println!();
     println!("Usage:");
-    println!("  cargo run -p ac-server -- demo");
-    println!("  cargo run -p ac-server -- run <commands-jsonl> [telemetry-jsonl]");
+    println!("  cargo run -p ac-server -- demo [config-toml]");
+    println!("  cargo run -p ac-server -- run <commands-jsonl> [telemetry-jsonl] [config-toml]");
 }
 
-fn run_scenario(commands: Vec<ClientCommand>, telemetry_path: &str) -> io::Result<()> {
-    let mut server = GameServer::new();
+fn run_scenario(
+    commands: Vec<ClientCommand>,
+    telemetry_path: &str,
+    config_path: &str,
+) -> io::Result<()> {
+    let policy = DetectionPolicy::load(config_path)?;
+    let mut server = GameServer::new(policy);
+
+    println!("Loaded detection policy: {config_path}");
+    println!(
+        "max_speed={} tolerance={} tick_ms={} fire_cooldown_ms={}",
+        policy.max_speed_units_per_second,
+        policy.movement_tolerance_units,
+        policy.fixed_tick_ms,
+        policy.fire_cooldown_ms
+    );
+    println!();
 
     for command in commands {
         server.process_command(command);
