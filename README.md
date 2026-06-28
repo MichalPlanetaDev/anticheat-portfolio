@@ -100,5 +100,3 @@ This project is defensive and educational.
 It does not include cheats, bypasses, injectors, malware, kernel components, commercial game reverse engineering, or instructions for attacking third-party software.
 
 All clients, servers, binaries, command streams, and telemetry samples are created specifically for this repository.
-
-All clients, servers, binaries, command streams, and telemetry samples are created specifically for this repository.
