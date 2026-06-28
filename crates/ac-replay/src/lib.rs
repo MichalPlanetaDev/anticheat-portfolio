@@ -1,12 +1,20 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     fs::File,
     io::{self, BufWriter, Write},
     path::Path,
 };
 
-use ac_protocol::{SuspicionReport, TelemetryEvent};
+use ac_protocol::{PlayerId, SuspicionKind, SuspicionReport, TelemetryEvent};
 use ac_telemetry::read_events;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlayerRiskSummary {
+    pub player_id: PlayerId,
+    pub reports: usize,
+    pub risk_score: u32,
+    pub suspicion_by_kind: BTreeMap<String, usize>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReplaySummary {
@@ -57,6 +65,53 @@ impl ReplaySummary {
 pub fn summarize_file(path: impl AsRef<Path>) -> io::Result<ReplaySummary> {
     let events = read_events(path)?;
     Ok(ReplaySummary::from_events(&events))
+}
+
+pub fn risk_summaries_from_file(path: impl AsRef<Path>) -> io::Result<Vec<PlayerRiskSummary>> {
+    let events = read_events(path)?;
+    Ok(risk_summaries_from_events(&events))
+}
+
+pub fn risk_summaries_from_events(events: &[TelemetryEvent]) -> Vec<PlayerRiskSummary> {
+    let reports = suspicion_reports_from_events(events);
+    let mut grouped: HashMap<PlayerId, Vec<SuspicionReport>> = HashMap::new();
+
+    for report in reports {
+        grouped.entry(report.player_id).or_default().push(report);
+    }
+
+    let mut summaries = grouped
+        .into_iter()
+        .map(|(player_id, reports)| {
+            let mut suspicion_by_kind = BTreeMap::new();
+            let mut raw_score = 0;
+
+            for report in &reports {
+                let kind = format!("{:?}", report.kind);
+                *suspicion_by_kind.entry(kind).or_insert(0) += 1;
+                raw_score += risk_weight(&report.kind);
+            }
+
+            PlayerRiskSummary {
+                player_id,
+                reports: reports.len(),
+                risk_score: raw_score.min(100),
+                suspicion_by_kind,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    summaries.sort_by_key(|summary| summary.player_id.0);
+    summaries
+}
+
+fn risk_weight(kind: &SuspicionKind) -> u32 {
+    match kind {
+        SuspicionKind::SpeedHack => 40,
+        SuspicionKind::FireRateViolation => 25,
+        SuspicionKind::InvalidStateTransition => 35,
+        SuspicionKind::PacketSequenceViolation => 20,
+    }
 }
 
 pub fn suspicion_reports_from_events(events: &[TelemetryEvent]) -> Vec<SuspicionReport> {
@@ -172,5 +227,39 @@ mod tests {
         assert_eq!(reports[0].player_id, PlayerId(1));
         assert_eq!(reports[0].sequence, 42);
         assert_eq!(reports[0].kind, SuspicionKind::SpeedHack);
+    }
+
+    #[test]
+    fn builds_player_risk_summary() {
+        let events = vec![
+            TelemetryEvent::Suspicion(SuspicionReport::new(
+                PlayerId(1),
+                10,
+                SuspicionKind::SpeedHack,
+                "speed violation",
+                5.0,
+                1.0,
+            )),
+            TelemetryEvent::Suspicion(SuspicionReport::new(
+                PlayerId(1),
+                11,
+                SuspicionKind::FireRateViolation,
+                "cooldown violation",
+                100.0,
+                500.0,
+            )),
+        ];
+
+        let summaries = risk_summaries_from_events(&events);
+
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].player_id, PlayerId(1));
+        assert_eq!(summaries[0].reports, 2);
+        assert_eq!(summaries[0].risk_score, 65);
+        assert_eq!(summaries[0].suspicion_by_kind.get("SpeedHack"), Some(&1));
+        assert_eq!(
+            summaries[0].suspicion_by_kind.get("FireRateViolation"),
+            Some(&1)
+        );
     }
 }

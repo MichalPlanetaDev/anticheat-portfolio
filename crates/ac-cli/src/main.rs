@@ -1,6 +1,9 @@
 use ac_detectors::{Detector, FireRateDetector, SpeedHackDetector};
 use ac_protocol::{FireSample, MovementSample, PlayerId, SuspicionReport, Vec2};
-use ac_replay::{export_suspicion_reports_csv, summarize_file, suspicion_reports_from_file};
+use ac_replay::{
+    export_suspicion_reports_csv, risk_summaries_from_file, summarize_file,
+    suspicion_reports_from_file,
+};
 
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -31,6 +34,18 @@ fn main() {
             };
 
             run_inspect(path);
+        }
+
+        Some("risk") => {
+            let Some(path) = args.get(1) else {
+                eprintln!("Missing telemetry file path.");
+                eprintln!();
+                eprintln!("Usage:");
+                eprintln!("  cargo run -p ac-cli -- risk samples/suspicious-telemetry.jsonl");
+                std::process::exit(2);
+            };
+
+            run_risk(path);
         }
 
         Some("export") => {
@@ -79,6 +94,7 @@ fn print_help() {
     println!("  replay <jsonl-path>  Summarize saved telemetry from a JSONL file");
     println!("  inspect <jsonl-path> Print detailed suspicion reports from telemetry");
     println!("  export <jsonl-path> <csv-path> Export suspicion reports to CSV");
+    println!("  risk <jsonl-path>    Show player risk summaries from telemetry");
 }
 
 fn run_speed_check() {
@@ -307,6 +323,40 @@ fn run_inspect(path: &str) {
         }
         Err(error) => {
             eprintln!("Failed to inspect telemetry file '{path}': {error}");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run_risk(path: &str) {
+    match risk_summaries_from_file(path) {
+        Ok(summaries) => {
+            println!("Player risk summary");
+            println!();
+            println!("File: {path}");
+            println!("Players with suspicion reports: {}", summaries.len());
+            println!();
+
+            if summaries.is_empty() {
+                println!("No suspicious behavior detected.");
+                return;
+            }
+
+            for summary in summaries {
+                println!("Player: {:?}", summary.player_id);
+                println!("Reports: {}", summary.reports);
+                println!("Risk score: {}", summary.risk_score);
+                println!("Breakdown:");
+
+                for (kind, count) in summary.suspicion_by_kind {
+                    println!("  {kind}: {count}");
+                }
+
+                println!();
+            }
+        }
+        Err(error) => {
+            eprintln!("Failed to build player risk summary: {error}");
             std::process::exit(1);
         }
     }
