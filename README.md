@@ -18,13 +18,23 @@ This project is built as a portfolio for multiplayer backend security and anti-c
 - CLI-first Linux and WSL workflow
 - CI-ready project structure
 
+## Current status
+
+- Rust CI passing
+- Docker CI passing
+- Docker Compose demo available
+- Configurable TOML detection policy
+- Player-level risk scoring
+- CSV investigation export
+- Versioned GitHub releases
+
 ## Architecture
 
-Pipeline:
+The project supports a local investigation flow:
 
-    ac-client-bot -> command JSONL -> ac-server -> telemetry JSONL -> ac-cli replay / inspect
+    ac-client-bot -> ac-server -> telemetry JSONL -> replay -> inspect -> risk -> CSV export
 
-The client bot generates controlled command streams. The server processes commands as input, not truth. The server owns the authoritative state, applies validation rules, records telemetry, and writes JSONL investigation logs. The CLI replays and inspects telemetry files.
+The CLI can summarize telemetry, inspect individual suspicion reports, calculate player risk scores, and export reports to CSV.
 
 ## Workspace modules
 
@@ -59,6 +69,18 @@ Run the suspicious scenario:
     cargo run -p ac-cli -- replay samples/suspicious-telemetry.jsonl
     cargo run -p ac-cli -- inspect samples/suspicious-telemetry.jsonl
 
+Calculate player risk:
+
+    cargo run -p ac-cli -- risk samples/suspicious-telemetry.jsonl
+
+Export investigation CSV:
+
+    cargo run -p ac-cli -- export samples/suspicious-telemetry.jsonl reports/suspicious-report.csv
+
+Run full Docker demo:
+
+    docker compose run --rm demo
+
 If just is installed:
 
     just demo
@@ -71,6 +93,12 @@ FireRateDetector flags fire commands that arrive before the server-side weapon c
 
 Packet sequence validation flags commands with repeated or non-increasing sequence numbers.
 
+## Scope
+
+This project is defensive and educational.
+
 It does not include cheats, bypasses, injectors, malware, kernel components, commercial game reverse engineering, or instructions for attacking third-party software.
+
+All clients, servers, binaries, command streams, and telemetry samples are created specifically for this repository.
 
 All clients, servers, binaries, command streams, and telemetry samples are created specifically for this repository.
