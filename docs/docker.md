@@ -2,6 +2,8 @@
 
 This project can be built and demonstrated inside Docker.
 
+The Docker demo uses `config/default.toml` through the mounted project directory.
+
 ## Build
 
     docker build -t anticheat-portfolio .
