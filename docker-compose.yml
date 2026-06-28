@@ -1,0 +1,14 @@
+services:
+  demo:
+    build: .
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: >
+      sh -c "
+      ac-client-bot &&
+      ac-server run samples/suspicious-commands.jsonl samples/suspicious-telemetry.jsonl &&
+      ac-cli replay samples/suspicious-telemetry.jsonl &&
+      ac-cli inspect samples/suspicious-telemetry.jsonl &&
+      ac-cli export samples/suspicious-telemetry.jsonl reports/suspicious-report.csv
+      "

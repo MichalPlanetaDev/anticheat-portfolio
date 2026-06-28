@@ -28,3 +28,9 @@ inspect-suspicious:
     cargo run -p ac-cli -- inspect samples/suspicious-telemetry.jsonl
 
 demo: bot run-normal replay-normal run-suspicious replay-suspicious inspect-suspicious
+
+docker-build:
+    docker build -t anticheat-portfolio .
+
+docker-demo:
+    docker compose run --rm demo
