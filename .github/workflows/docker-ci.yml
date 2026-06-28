@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  docker-build:
+  docker-demo:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,3 +15,11 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t anticheat-portfolio .
+
+      - name: Run Docker Compose demo
+        run: docker compose run --rm demo
+
+      - name: Verify exported report
+        run: |
+          test -f reports/suspicious-report.csv
+          grep -q "player_id,sequence,kind,reason,observed_value,expected_limit" reports/suspicious-report.csv
